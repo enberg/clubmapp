@@ -17,6 +17,10 @@ import java.util.ArrayList;
 
 public class FinderActivity extends AppCompatActivity implements SensorEventListener {
 
+    // Constants
+    private static final int AZIMUTH_CACHE_MAX_SIZE = 10;
+    private static final int BOTTLE_UPDATE_RATE = 1000;
+
     // Visuals
     private View bottle;
     private TextView text;
@@ -33,11 +37,9 @@ public class FinderActivity extends AppCompatActivity implements SensorEventList
     private float[] mOrientation = new float[3];
     private float currentAzimuth = 0;
     private ArrayList<Float> azimuthCache = new ArrayList<Float>();
-    private int azimuthCacheMaxSize = 20;
 
     // Bottle related
     private float currentBottleRotation = 0;
-    private int bottleUpdateRate = 200;
     private boolean updatingBottle = false;
 
 
@@ -70,7 +72,7 @@ public class FinderActivity extends AppCompatActivity implements SensorEventList
 
         updatingBottle = true;
         final Handler h = new Handler();
-        final int delay = bottleUpdateRate; //milliseconds
+        final int delay = FinderActivity.BOTTLE_UPDATE_RATE; //milliseconds
         h.postDelayed(new Runnable() {
             public void run() {
                 spinBottle(-currentAzimuth);
@@ -99,7 +101,7 @@ public class FinderActivity extends AppCompatActivity implements SensorEventList
         float optimalTo = optimizeTo(from, to);
 
         RotateAnimation rotate = new RotateAnimation(from, optimalTo, Animation.RELATIVE_TO_SELF, 0.5f, Animation.RELATIVE_TO_SELF, 0.5f);
-        rotate.setDuration(bottleUpdateRate);
+        rotate.setDuration(FinderActivity.BOTTLE_UPDATE_RATE);
         rotate.setRepeatCount(0);
         rotate.setFillAfter(true);
         bottle.startAnimation(rotate);
@@ -133,7 +135,7 @@ public class FinderActivity extends AppCompatActivity implements SensorEventList
         }
 
         int azimuthCacheLength = azimuthCache.size();
-        if ( azimuthCacheLength >= azimuthCacheMaxSize) {
+        if ( azimuthCacheLength >= FinderActivity.AZIMUTH_CACHE_MAX_SIZE) {
             float averageAzimuth = 0;
 
             for (int i = 0; i < azimuthCacheLength; i++) {
