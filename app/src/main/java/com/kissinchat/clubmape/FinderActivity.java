@@ -12,6 +12,9 @@ import android.view.animation.Animation;
 import android.view.animation.RotateAnimation;
 import android.widget.TextView;
 
+import java.lang.reflect.Array;
+import java.util.ArrayList;
+
 public class FinderActivity extends AppCompatActivity implements SensorEventListener {
 
     // Visuals
@@ -29,10 +32,12 @@ public class FinderActivity extends AppCompatActivity implements SensorEventList
     private float[] mR = new float[9];
     private float[] mOrientation = new float[3];
     private float currentAzimuth = 0;
+    private ArrayList<Float> azimuthCache = new ArrayList<Float>();
+    private int azimuthCacheMaxSize = 20;
 
     // Bottle related
     private float currentBottleRotation = 0;
-    private int bottleUpdateRate = 400;
+    private int bottleUpdateRate = 200;
     private boolean updatingBottle = false;
 
 
@@ -123,9 +128,24 @@ public class FinderActivity extends AppCompatActivity implements SensorEventList
             SensorManager.getRotationMatrix(mR, null, mLastAccelerometer, mLastMagnetometer);
             SensorManager.getOrientation(mR, mOrientation);
             float azimuthInRadians = mOrientation[0];
-            float azimuthInDegress = (float)(Math.toDegrees(azimuthInRadians)+360)%360;
-            currentAzimuth = azimuthInDegress;
+//            currentAzimuth = (float)(Math.toDegrees(azimuthInRadians)+360)%360;
+            azimuthCache.add( (float)(Math.toDegrees(azimuthInRadians)+360)%360 );
         }
+
+        int azimuthCacheLength = azimuthCache.size();
+        if ( azimuthCacheLength >= azimuthCacheMaxSize) {
+            float averageAzimuth = 0;
+
+            for (int i = 0; i < azimuthCacheLength; i++) {
+                averageAzimuth += azimuthCache.get(i);
+            }
+
+            averageAzimuth /= azimuthCacheLength;
+            azimuthCache.clear();
+
+            currentAzimuth = averageAzimuth;
+        }
+
     }
 
     @Override
