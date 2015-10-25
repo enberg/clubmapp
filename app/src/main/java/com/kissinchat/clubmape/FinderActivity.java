@@ -6,14 +6,19 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.os.Handler;
 import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.RotateAnimation;
 import android.widget.TextView;
 
 public class FinderActivity extends AppCompatActivity implements SensorEventListener {
+
+    // Visuals
     private View bottle;
     private TextView text;
+
+    // Compass
     private SensorManager mSensorManager;
     private Sensor mAccelerometer;
     private Sensor mMagnetometer;
@@ -23,7 +28,13 @@ public class FinderActivity extends AppCompatActivity implements SensorEventList
     private boolean mLastMagnetometerSet = false;
     private float[] mR = new float[9];
     private float[] mOrientation = new float[3];
-    private float mCurrentDegree = 0f;
+    private float currentAzimuth = 0;
+
+    // Bottle related
+    private float currentBottleRotation = 0;
+    private int bottleUpdateRate = 400;
+    private boolean updatingBottle = false;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,6 +62,18 @@ public class FinderActivity extends AppCompatActivity implements SensorEventList
         super.onResume();
         mSensorManager.registerListener(this, mAccelerometer, SensorManager.SENSOR_DELAY_GAME);
         mSensorManager.registerListener(this, mMagnetometer, SensorManager.SENSOR_DELAY_GAME);
+
+        updatingBottle = true;
+        final Handler h = new Handler();
+        final int delay = bottleUpdateRate; //milliseconds
+        h.postDelayed(new Runnable() {
+            public void run() {
+                spinBottle(-currentAzimuth);
+                if (updatingBottle) {
+                    h.postDelayed(this, delay);
+                }
+            }
+        }, delay);
     }
 
     @Override
@@ -58,24 +81,37 @@ public class FinderActivity extends AppCompatActivity implements SensorEventList
         super.onPause();
         mSensorManager.unregisterListener(this, mAccelerometer);
         mSensorManager.unregisterListener(this, mMagnetometer);
+        updatingBottle = false;
     }
 
     private void spinBottle(float to) {
-        float from = bottle.getRotation();
 
-//        RotateAnimation rotate = new RotateAnimation(from, to, Animation.RELATIVE_TO_SELF, 0.5f, Animation.RELATIVE_TO_SELF, 0.5f);
-//        rotate.setDuration(200);
-//        rotate.setRepeatCount(0);
-//        rotate.setFillAfter(true);
+        // Update current bottle rotation
+        float from = currentBottleRotation;
+        currentBottleRotation = to;
 
-//        bottle.startAnimation(rotate);
+        // Find shortest angle
+        float optimalTo = optimizeTo(from, to);
 
-        bottle.setRotation(to);
+        RotateAnimation rotate = new RotateAnimation(from, optimalTo, Animation.RELATIVE_TO_SELF, 0.5f, Animation.RELATIVE_TO_SELF, 0.5f);
+        rotate.setDuration(bottleUpdateRate);
+        rotate.setRepeatCount(0);
+        rotate.setFillAfter(true);
+        bottle.startAnimation(rotate);
+
         text.setText(String.valueOf(to));
+    }
+
+    private float optimizeTo(float from, float to) {
+        float fromR = (float) Math.toRadians(from);
+        float toR = (float) Math.toRadians(to);
+        return from + (float) Math.toDegrees( Math.atan2(Math.sin(toR - fromR), Math.cos(toR - fromR)) );
     }
 
     @Override
     public void onSensorChanged(SensorEvent event) {
+
+        // Get compass information
         if (event.sensor == mAccelerometer) {
             System.arraycopy(event.values, 0, mLastAccelerometer, 0, event.values.length);
             mLastAccelerometerSet = true;
@@ -88,7 +124,7 @@ public class FinderActivity extends AppCompatActivity implements SensorEventList
             SensorManager.getOrientation(mR, mOrientation);
             float azimuthInRadians = mOrientation[0];
             float azimuthInDegress = (float)(Math.toDegrees(azimuthInRadians)+360)%360;
-            spinBottle(azimuthInDegress);
+            currentAzimuth = azimuthInDegress;
         }
     }
 
